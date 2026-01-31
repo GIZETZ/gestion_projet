@@ -68,6 +68,17 @@ export default function GamePage() {
     });
   };
 
+  // Log topics mapping whenever topics change
+  useEffect(() => {
+    if (topics && topics.length > 0) {
+      console.log("=== Mappings des Sujets ===");
+      topics.forEach((topic, index) => {
+        console.log(`Position ${index + 1}: ${topic.title}`);
+      });
+      console.log("===========================");
+    }
+  }, [topics]);
+
   useEffect(() => {
     if (!socket) {
       console.log("Socket not available yet");
