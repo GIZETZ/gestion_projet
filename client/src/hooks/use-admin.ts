@@ -47,6 +47,39 @@ export function useResetGame() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.topics.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.admin.listUsers.path] });
+    },
+  });
+}
+
+export function useGameStatus() {
+  return useQuery({
+    queryKey: [api.admin.getGameStatus.path],
+    queryFn: async () => {
+      const res = await fetch(api.admin.getGameStatus.path);
+      if (!res.ok) throw new Error("Failed to fetch game status");
+      return api.admin.getGameStatus.responses[200].parse(await res.json());
+    },
+    refetchInterval: 1000,
+  });
+}
+
+export function useToggleGame() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (isStarted: boolean) => {
+      const res = await fetch(api.admin.toggleGame.path, {
+        method: api.admin.toggleGame.method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isStarted }),
+      });
+
+      if (!res.ok) throw new Error("Failed to toggle game");
+      return api.admin.toggleGame.responses[200].parse(await res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.admin.getGameStatus.path] });
     },
   });
 }

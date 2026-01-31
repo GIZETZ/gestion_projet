@@ -179,6 +179,40 @@ export async function registerRoutes(
     res.json(usersWithTopics);
   });
 
+  app.get(api.admin.getGameStatus.path, isAdmin, async (req, res) => {
+    const isStarted = await storage.getGameStatus();
+    res.json({ isStarted });
+  });
+
+  app.post(api.admin.toggleGame.path, isAdmin, async (req, res) => {
+    try {
+      const { isStarted } = api.admin.toggleGame.input.parse(req.body);
+      const updated = await storage.setGameStatus(isStarted);
+      res.json({ isStarted: updated });
+    } catch (err) {
+      res.status(400).json({ message: "Invalid input" });
+    }
+  });
+
+  app.get(api.admin.downloadReport.path, isAdmin, async (req, res) => {
+    const allUsers = await storage.listUsers();
+    const allTopics = await storage.getTopics();
+    
+    let report = "Rapport Final - Choix de Sujets\n";
+    report += "Généré le: " + new Date().toLocaleString() + "\n\n";
+    report += "Membres du groupe | Groupe | Sujet\n";
+    report += "-----------------------------------\n";
+
+    allUsers.filter(u => !u.isAdmin).forEach(user => {
+      const topic = allTopics.find(t => t.assignedToUserId === user.id);
+      report += `Chef: ${user.username}, Membres: ${user.groupMembers} | ${user.groupName} | ${topic ? topic.title : "Aucun"}\n`;
+    });
+
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Content-Disposition', 'attachment; filename=rapport_final.txt');
+    res.send(report);
+  });
+
   app.patch(api.admin.approveUser.path, isAdmin, async (req, res) => {
     const userId = Number(req.params.id);
     const { approved } = req.body;

@@ -76,6 +76,30 @@ export const api = {
         403: errorSchemas.forbidden,
       },
     },
+    toggleGame: {
+      method: "POST" as const,
+      path: "/api/admin/toggle-game",
+      input: z.object({ isStarted: z.boolean() }),
+      responses: {
+        200: z.object({ isStarted: z.boolean() }),
+        403: errorSchemas.forbidden,
+      },
+    },
+    getGameStatus: {
+      method: "GET" as const,
+      path: "/api/admin/game-status",
+      responses: {
+        200: z.object({ isStarted: z.boolean() }),
+      },
+    },
+    downloadReport: {
+      method: "GET" as const,
+      path: "/api/admin/report",
+      responses: {
+        200: z.any(),
+        403: errorSchemas.forbidden,
+      },
+    },
   },
   topics: {
     list: {

@@ -1,6 +1,7 @@
 import { Layout } from "@/components/Layout";
-import { useAdminUsers, useApproveUser, useResetGame } from "@/hooks/use-admin";
+import { useAdminUsers, useApproveUser, useResetGame, useGameStatus, useToggleGame } from "@/hooks/use-admin";
 import { UserWithTopic } from "@shared/schema";
+import { api } from "@shared/routes";
 import {
   Table,
   TableBody,
@@ -22,13 +23,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Check, X, RotateCcw, Loader2 } from "lucide-react";
+import { Check, X, RotateCcw, Loader2, Play, Square, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function AdminPage() {
   const { data: users, isLoading } = useAdminUsers();
   const { mutate: approveUser, isPending: isApproving } = useApproveUser();
   const { mutate: resetGame, isPending: isResetting } = useResetGame();
+  const { data: gameStatus } = useGameStatus();
+  const { mutate: toggleGame, isPending: isToggling } = useToggleGame();
   const { toast } = useToast();
 
   const handleApprove = (id: number, approved: boolean) => {
@@ -53,6 +56,10 @@ export default function AdminPage() {
     });
   };
 
+  const handleDownloadReport = () => {
+    window.location.href = api.admin.downloadReport.path;
+  };
+
   return (
     <Layout>
       <div className="max-w-5xl mx-auto space-y-8">
@@ -62,29 +69,48 @@ export default function AdminPage() {
             <p className="text-muted-foreground">Gérez les accès et l'état du jeu.</p>
           </div>
           
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" className="gap-2">
-                <RotateCcw className="w-4 h-4" />
-                Réinitialiser le Jeu
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Cette action va désassigner tous les sujets. Les groupes devront choisir à nouveau.
-                  Cette action est irréversible.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Annuler</AlertDialogCancel>
-                <AlertDialogAction onClick={handleReset} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  {isResetting ? "Réinitialisation..." : "Confirmer la réinitialisation"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <div className="flex gap-2">
+            <Button 
+              variant={gameStatus?.isStarted ? "outline" : "default"}
+              className="gap-2"
+              onClick={() => toggleGame(!gameStatus?.isStarted)}
+              disabled={isToggling}
+            >
+              {gameStatus?.isStarted ? (
+                <><Square className="w-4 h-4" /> Arrêter le Jeu</>
+              ) : (
+                <><Play className="w-4 h-4" /> Lancer le Jeu</>
+              )}
+            </Button>
+
+            <Button variant="outline" className="gap-2" onClick={handleDownloadReport}>
+              <Download className="w-4 h-4" />
+              Rapport
+            </Button>
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" className="gap-2">
+                  <RotateCcw className="w-4 h-4" />
+                  Réinitialiser
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Cette action va désassigner tous les sujets. Les groupes devront choisir à nouveau.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleReset} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    {isResetting ? "Réinitialisation..." : "Confirmer"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
 
         <div className="bg-card rounded-xl border shadow-sm overflow-hidden">

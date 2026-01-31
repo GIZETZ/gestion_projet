@@ -2,19 +2,29 @@ import { useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { useTopics, useChooseTopic } from "@/hooks/use-topics";
 import { useUser } from "@/hooks/use-auth";
+import { useGameStatus } from "@/hooks/use-admin";
 import { TopicCard } from "@/components/TopicCard";
 import { useToast } from "@/hooks/use-toast";
 import confetti from "canvas-confetti";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, PlayCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function GamePage() {
   const { data: topics, isLoading, error } = useTopics();
   const { mutate: chooseTopic, isPending: isChoosing } = useChooseTopic();
   const { user } = useUser();
+  const { data: gameStatus } = useGameStatus();
   const { toast } = useToast();
 
   const handleSelect = (id: number) => {
+    if (!gameStatus?.isStarted) {
+      toast({
+        title: "Action impossible",
+        description: "Le jeu n'a pas encore été lancé par l'administrateur.",
+        variant: "destructive",
+      });
+      return;
+    }
     chooseTopic(id, {
       onSuccess: () => {
         // Trigger confetti
@@ -71,6 +81,12 @@ export default function GamePage() {
           <p className="text-lg text-muted-foreground font-hand">
             Cliquez sur une carte pour révéler et réserver votre sujet d'exposé.
           </p>
+          {!gameStatus?.isStarted && (
+            <div className="mt-4 flex items-center justify-center gap-2 text-orange-600 font-bold bg-orange-50 p-2 rounded-full max-w-sm mx-auto">
+              <PlayCircle className="w-5 h-5" />
+              Le jeu est actuellement en pause
+            </div>
+          )}
         </div>
 
         {error && (

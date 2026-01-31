@@ -13,6 +13,11 @@ export const users = pgTable("users", {
   isApproved: boolean("is_approved").default(false),
 });
 
+export const gameSettings = pgTable("game_settings", {
+  id: serial("id").primaryKey(),
+  isStarted: boolean("is_started").notNull().default(false),
+});
+
 export const topics = pgTable("topics", {
   id: serial("id").primaryKey(),
   letter: text("letter").notNull(), // A, B, C, D, E, F

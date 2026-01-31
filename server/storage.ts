@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users, topics, type User, type InsertUser, type Topic } from "@shared/schema";
+import { users, topics, gameSettings, type User, type InsertUser, type Topic } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 export interface IStorage {
@@ -16,9 +16,33 @@ export interface IStorage {
   chooseTopic(topicId: number, userId: number): Promise<Topic>;
   resetTopics(): Promise<void>;
   seedTopics(): Promise<void>;
+
+  // Game Settings
+  getGameStatus(): Promise<boolean>;
+  setGameStatus(isStarted: boolean): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
+  async getGameStatus(): Promise<boolean> {
+    const [settings] = await db.select().from(gameSettings).limit(1);
+    if (!settings) {
+      const [newSettings] = await db.insert(gameSettings).values({ isStarted: false }).returning();
+      return newSettings.isStarted;
+    }
+    return settings.isStarted;
+  }
+
+  async setGameStatus(isStarted: boolean): Promise<boolean> {
+    const [settings] = await db.select().from(gameSettings).limit(1);
+    if (!settings) {
+      const [newSettings] = await db.insert(gameSettings).values({ isStarted }).returning();
+      return newSettings.isStarted;
+    } else {
+      const [updated] = await db.update(gameSettings).set({ isStarted }).where(eq(gameSettings.id, settings.id)).returning();
+      return updated.isStarted;
+    }
+  }
+
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
