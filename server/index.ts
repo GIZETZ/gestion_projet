@@ -1,11 +1,16 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
+import cors from "cors";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 
 const app = express();
+// When behind a proxy (like Render), trust the first proxy so secure cookies work
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
 const httpServer = createServer(app);
 
 declare module "http" {
@@ -64,11 +69,18 @@ app.use((req, res, next) => {
 (async () => {
   const io = new SocketIOServer(httpServer, {
     cors: {
-      origin: "*",
+      origin: process.env.FRONTEND_ORIGIN || "*",
       methods: ["GET", "POST"],
     },
   });
   
+  // Allow cross-origin requests with credentials when FRONTEND_ORIGIN is set
+  app.use(
+    cors({
+      origin: process.env.FRONTEND_ORIGIN || true,
+      credentials: true,
+    })
+  );
   await registerRoutes(httpServer, app, io);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {

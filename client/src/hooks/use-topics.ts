@@ -5,7 +5,7 @@ export function useTopics() {
   return useQuery({
     queryKey: [api.topics.list.path],
     queryFn: async () => {
-      const res = await fetch(api.topics.list.path);
+      const res = await fetch(api.topics.list.path, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch topics");
       return api.topics.list.responses[200].parse(await res.json());
     },
@@ -22,6 +22,7 @@ export function useChooseTopic() {
       const res = await fetch(url, {
         method: api.topics.choose.method,
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
       });
 
       if (!res.ok) {
