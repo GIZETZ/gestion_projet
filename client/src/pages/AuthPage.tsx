@@ -150,7 +150,7 @@ export default function AuthPage() {
                           <FormItem>
                             <FormLabel>Nom du Chef</FormLabel>
                             <FormControl>
-                              <Input placeholder="Ex: Marie Curie" {...field} />
+                              <Input placeholder="Ex: Kôtou" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -176,7 +176,7 @@ export default function AuthPage() {
                           <FormItem>
                             <FormLabel>Membres du groupe</FormLabel>
                             <FormControl>
-                              <Input placeholder="Ex: Jean, Marc, Sophie" {...field} />
+                              <Input placeholder="Ex: Madouss, Marc, Chikwoué" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
