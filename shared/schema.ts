@@ -7,6 +7,7 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(), // Nom du chef de groupe
   groupName: text("group_name").notNull(),
+  groupMembers: text("group_members").notNull().default(""), // Noms des membres séparés par des virgules
   password: text("password").notNull(), // Simple password or just use name/group as identity
   isAdmin: boolean("is_admin").default(false),
   isApproved: boolean("is_approved").default(false),
@@ -30,6 +31,7 @@ export const topicsRelations = relations(topics, ({ one }) => ({
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   groupName: true,
+  groupMembers: true,
   password: true,
 });
 
