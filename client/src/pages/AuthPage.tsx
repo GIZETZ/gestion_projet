@@ -77,9 +77,9 @@ export default function AuthPage() {
       <div className="flex min-h-[80vh] items-center justify-center">
         <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-8 duration-700">
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-display font-bold text-primary mb-2">Choix de Sujet</h1>
+            <h1 className="text-4xl font-display font-bold text-primary mb-2">Choix de Sujet Gestion de projet</h1>
             <p className="text-muted-foreground font-hand text-lg">
-              Inscrivez votre groupe et tentez votre chance !
+              Inscris ton groupe et choisis ton sujet
             </p>
           </div>
 
@@ -93,7 +93,7 @@ export default function AuthPage() {
               <Card className="border-2 shadow-lg">
                 <CardHeader>
                   <CardTitle>Connexion Chef de Groupe</CardTitle>
-                  <CardDescription>Entrez vos identifiants pour accéder au tableau.</CardDescription>
+                  <CardDescription>Met tes identifiants pour te connecter oub crée le compte de ton groupe.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Form {...loginForm}>
