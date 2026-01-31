@@ -99,22 +99,37 @@ export default function AdminPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Chef de Groupe</TableHead>
+                  <TableHead>Membres du groupe (Chef précisé)</TableHead>
                   <TableHead>Groupe</TableHead>
                   <TableHead>Statut</TableHead>
+                  <TableHead>Sujet</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {users?.filter(u => !u.isAdmin).map((user) => (
                   <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.username}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-primary">Chef: {user.username}</span>
+                        <span className="text-xs text-muted-foreground">Membres: {user.groupMembers}</span>
+                      </div>
+                    </TableCell>
                     <TableCell>{user.groupName}</TableCell>
                     <TableCell>
                       {user.isApproved ? (
                         <Badge className="bg-green-100 text-green-800 hover:bg-green-100 border-green-200">Approuvé</Badge>
                       ) : (
                         <Badge variant="secondary" className="bg-orange-100 text-orange-800 hover:bg-orange-100 border-orange-200">En attente</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {user.topicTitle ? (
+                        <Badge variant="outline" className="border-primary/30 text-primary font-medium">
+                          {user.topicTitle}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">Aucun sujet choisi</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">

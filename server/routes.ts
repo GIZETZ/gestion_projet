@@ -165,8 +165,19 @@ export async function registerRoutes(
 
   // Admin Routes
   app.get(api.admin.listUsers.path, isAdmin, async (req, res) => {
-    const users = await storage.listUsers();
-    res.json(users);
+    const allUsers = await storage.listUsers();
+    const allTopics = await storage.getTopics();
+    
+    // Map topics to users for the admin view
+    const usersWithTopics = allUsers.map(user => {
+      const userTopic = allTopics.find(t => t.assignedToUserId === user.id);
+      return {
+        ...user,
+        topicTitle: userTopic ? userTopic.title : null
+      };
+    });
+    
+    res.json(usersWithTopics);
   });
 
   app.patch(api.admin.approveUser.path, isAdmin, async (req, res) => {

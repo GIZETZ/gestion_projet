@@ -171,6 +171,19 @@ export default function AuthPage() {
                       />
                       <FormField
                         control={registerForm.control}
+                        name="groupMembers"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Membres du groupe</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Ex: Jean, Marc, Sophie" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={registerForm.control}
                         name="password"
                         render={({ field }) => (
                           <FormItem>
