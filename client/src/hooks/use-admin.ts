@@ -9,6 +9,8 @@ export function useAdminUsers() {
       if (!res.ok) throw new Error("Failed to fetch users");
       return api.admin.listUsers.responses[200].parse(await res.json());
     },
+    refetchInterval: 2000, // Refetch every 2 seconds to stay in sync
+    staleTime: 1000, // Data is stale after 1 second
   });
 }
 
@@ -60,7 +62,8 @@ export function useGameStatus() {
       if (!res.ok) throw new Error("Failed to fetch game status");
       return api.admin.getGameStatus.responses[200].parse(await res.json());
     },
-    refetchInterval: 1000,
+    refetchInterval: 1500, // Refetch every 1.5 seconds
+    staleTime: 500, // Data is stale after 500ms
   });
 }
 

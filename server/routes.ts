@@ -8,12 +8,15 @@ import MemoryStore from "memorystore";
 import { users } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
+import { Server as SocketIOServer } from "socket.io";
+import PDFDocument from "pdfkit";
 
 const SessionStore = MemoryStore(session);
 
 export async function registerRoutes(
   httpServer: Server,
-  app: Express
+  app: Express,
+  io: SocketIOServer
 ): Promise<Server> {
   
   // Auth Middleware
@@ -58,6 +61,15 @@ export async function registerRoutes(
 
   // Seed topics on startup
   await storage.seedTopics();
+
+  // Socket.io setup - handle real-time game events
+  io.on("connection", (socket) => {
+    console.log(`Client connected: ${socket.id}`);
+
+    socket.on("disconnect", () => {
+      console.log(`Client disconnected: ${socket.id}`);
+    });
+  });
 
   // Auth Routes
   app.post(api.auth.register.path, async (req, res) => {
@@ -159,6 +171,10 @@ export async function registerRoutes(
     }
 
     const updated = await storage.chooseTopic(topicId, user.id);
+    
+    // Emit event to all connected clients to refresh their topics list
+    io.emit("topics-updated", { topicId, userId: user.id, title: updated.title });
+    
     res.json(updated);
   });
 
@@ -179,7 +195,8 @@ export async function registerRoutes(
     res.json(usersWithTopics);
   });
 
-  app.get(api.admin.getGameStatus.path, isAdmin, async (req, res) => {
+  // Expose game status to any authenticated user (players and admins)
+  app.get(api.admin.getGameStatus.path, isAuthenticated, async (req, res) => {
     const isStarted = await storage.getGameStatus();
     res.json({ isStarted });
   });
@@ -188,6 +205,10 @@ export async function registerRoutes(
     try {
       const { isStarted } = api.admin.toggleGame.input.parse(req.body);
       const updated = await storage.setGameStatus(isStarted);
+      
+      // Emit event to all connected clients to refresh their game status
+      io.emit("game-status-updated", { isStarted: updated });
+      
       res.json({ isStarted: updated });
     } catch (err) {
       res.status(400).json({ message: "Invalid input" });
@@ -195,33 +216,147 @@ export async function registerRoutes(
   });
 
   app.get(api.admin.downloadReport.path, isAdmin, async (req, res) => {
-    const allUsers = await storage.listUsers();
-    const allTopics = await storage.getTopics();
-    
-    let report = "Rapport Final - Choix de Sujets\n";
-    report += "Généré le: " + new Date().toLocaleString() + "\n\n";
-    report += "Membres du groupe | Groupe | Sujet\n";
-    report += "-----------------------------------\n";
+    try {
+      const allUsers = await storage.listUsers();
+      const allTopics = await storage.getTopics();
 
-    allUsers.filter(u => !u.isAdmin).forEach(user => {
-      const topic = allTopics.find(t => t.assignedToUserId === user.id);
-      report += `Chef: ${user.username}, Membres: ${user.groupMembers} | ${user.groupName} | ${topic ? topic.title : "Aucun"}\n`;
-    });
+      // Filter out admin users
+      const nonAdminUsers = allUsers.filter(u => !u.isAdmin);
 
-    res.setHeader('Content-Type', 'text/plain');
-    res.setHeader('Content-Disposition', 'attachment; filename=rapport_final.txt');
-    res.send(report);
+      // Create PDF document
+      const doc = new PDFDocument();
+      const filename = `rapport_final_${new Date().toISOString().split('T')[0]}.pdf`;
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      
+      doc.pipe(res);
+
+      // Title
+      doc.fontSize(20).font('Helvetica-Bold').text('Rapport Final - Choix de Sujets', { align: 'center' });
+      doc.fontSize(10).text(`Généré le: ${new Date().toLocaleString('fr-FR')}`, { align: 'center' });
+      doc.moveDown();
+
+      // Table header and responsive columns
+      const leftMargin = 50;
+      const rightMargin = 50;
+      const pageWidth = doc.page.width;
+      const usableWidth = pageWidth - leftMargin - rightMargin;
+
+      // Column widths (proportional) - make the subject column wider
+      const col1Width = Math.floor(usableWidth * 0.18); // Chef
+      const col2Width = Math.floor(usableWidth * 0.20); // Groupe
+      const col3Width = Math.floor(usableWidth * 0.30); // Membres
+      const col4Width = usableWidth - (col1Width + col2Width + col3Width); // Sujet Assigné
+
+      const headerY = doc.y;
+      const headerFontSize = 10;
+      const rowPadding = 6;
+
+      doc.fontSize(headerFontSize).font('Helvetica-Bold');
+      doc.text('Chef du Groupe', leftMargin, headerY, { width: col1Width });
+      doc.text('Groupe', leftMargin + col1Width, headerY, { width: col2Width });
+      doc.text('Membres', leftMargin + col1Width + col2Width, headerY, { width: col3Width });
+      doc.text('Sujet Assigné', leftMargin + col1Width + col2Width + col3Width, headerY, { width: col4Width });
+
+      // Horizontal line under headers
+      const headerHeight = Math.max(
+        doc.heightOfString('Chef du Groupe', { width: col1Width }),
+        doc.heightOfString('Groupe', { width: col2Width }),
+        doc.heightOfString('Membres', { width: col3Width }),
+        doc.heightOfString('Sujet Assigné', { width: col4Width }),
+      );
+
+      doc.moveTo(leftMargin - 10, headerY + headerHeight + rowPadding / 2)
+         .lineTo(pageWidth - rightMargin, headerY + headerHeight + rowPadding / 2)
+         .stroke();
+
+      // Table rows
+      doc.font('Helvetica').fontSize(10);
+      let yPos = headerY + headerHeight + rowPadding;
+      const bottomLimit = doc.page.height - 60; // leave room for signature/footer
+
+      for (const user of nonAdminUsers) {
+        const topic = allTopics.find(t => t.assignedToUserId === user.id);
+        const username = user.username || 'N/A';
+        const groupName = user.groupName || 'N/A';
+        const members = user.groupMembers || 'Aucun';
+        const topicTitle = topic ? topic.title : 'Aucun sujet assigné';
+
+        // Measure heights for each cell with wrapping
+        const h1 = doc.heightOfString(username, { width: col1Width });
+        const h2 = doc.heightOfString(groupName, { width: col2Width });
+        const h3 = doc.heightOfString(members, { width: col3Width });
+        const h4 = doc.heightOfString(topicTitle, { width: col4Width });
+
+        const cellHeight = Math.max(h1, h2, h3, h4) + rowPadding;
+
+        // New page if needed
+        if (yPos + cellHeight > bottomLimit) {
+          doc.addPage();
+          yPos = 50;
+
+          // Redraw headers on new page
+          doc.font('Helvetica-Bold').fontSize(headerFontSize);
+          doc.text('Chef du Groupe', leftMargin, yPos, { width: col1Width });
+          doc.text('Groupe', leftMargin + col1Width, yPos, { width: col2Width });
+          doc.text('Membres', leftMargin + col1Width + col2Width, yPos, { width: col3Width });
+          doc.text('Sujet Assigné', leftMargin + col1Width + col2Width + col3Width, yPos, { width: col4Width });
+
+          const newHeaderH = Math.max(
+            doc.heightOfString('Chef du Groupe', { width: col1Width }),
+            doc.heightOfString('Groupe', { width: col2Width }),
+            doc.heightOfString('Membres', { width: col3Width }),
+            doc.heightOfString('Sujet Assigné', { width: col4Width }),
+          );
+
+          doc.moveTo(leftMargin - 10, yPos + newHeaderH + rowPadding / 2)
+             .lineTo(pageWidth - rightMargin, yPos + newHeaderH + rowPadding / 2)
+             .stroke();
+
+          yPos += newHeaderH + rowPadding;
+          doc.font('Helvetica').fontSize(10);
+        }
+
+        // Draw each cell with wrapping
+        doc.text(username, leftMargin, yPos, { width: col1Width });
+        doc.text(groupName, leftMargin + col1Width, yPos, { width: col2Width });
+        doc.text(members, leftMargin + col1Width + col2Width, yPos, { width: col3Width });
+        doc.text(topicTitle, leftMargin + col1Width + col2Width + col3Width, yPos, { width: col4Width });
+
+        // Move to next row
+        yPos += cellHeight;
+      }
+
+      // Signature area
+      doc.moveDown(2);
+      doc.fontSize(10).text('_' + '_'.repeat(40), { align: 'left' });
+      doc.text('Administrateur', { align: 'left' });
+
+      doc.end();
+    } catch (err) {
+      console.error('Error generating PDF report:', err);
+      res.status(500).json({ message: 'Error generating PDF report' });
+    }
   });
 
   app.patch(api.admin.approveUser.path, isAdmin, async (req, res) => {
     const userId = Number(req.params.id);
     const { approved } = req.body;
     const updated = await storage.approveUser(userId, approved);
+    
+    // Emit event to all connected clients to refresh users list
+    io.emit("users-updated", { userId, approved });
+    
     res.json(updated);
   });
 
   app.post(api.admin.resetGame.path, isAdmin, async (req, res) => {
     await storage.resetTopics();
+    
+    // Emit event to all connected clients to refresh topics
+    io.emit("topics-updated", { reset: true });
+    
     res.json({ message: "Game reset" });
   });
 
