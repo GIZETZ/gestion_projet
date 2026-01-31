@@ -21,6 +21,8 @@ export const gameSettings = pgTable("game_settings", {
 export const topics = pgTable("topics", {
   id: serial("id").primaryKey(),
   letter: text("letter").notNull(), // A, B, C, D, E, F
+  // Position represents the card slot (1..6) for ordering on the board
+  position: integer("position").notNull().default(0),
   title: text("title").notNull(), // Le sujet (ex: PRISM)
   assignedToUserId: integer("assigned_to_user_id").references(() => users.id), // Null si pas encore choisi
   isRevealed: boolean("is_revealed").default(false),

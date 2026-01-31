@@ -30,9 +30,9 @@ export function TopicCard({ topic, onSelect, isPending, currentUser }: TopicCard
           "hover:shadow-2xl hover:scale-[1.02] duration-300"
         )}>
           <div className="text-8xl font-black text-primary font-display drop-shadow-sm select-none">
-            {topic.letter}
+            ?
           </div>
-          <p className="mt-4 text-muted-foreground font-hand text-lg">Cliquez pour choisir</p>
+          <p className="mt-4 text-muted-foreground font-hand text-lg">Si tu cliques c'est ton thème!</p>
         </div>
 
         {/* BACK (Face Up - Topic & Group) */}

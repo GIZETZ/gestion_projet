@@ -78,7 +78,7 @@ export class DatabaseStorage implements IStorage {
       with: {
         assignedUser: true,
       },
-      orderBy: (topics, { asc }) => [asc(topics.letter)],
+      orderBy: (topics, { asc }) => [asc(topics.position)],
     });
   }
 
@@ -105,27 +105,29 @@ export class DatabaseStorage implements IStorage {
     const existing = await db.select().from(topics);
     if (existing.length === 0) return;
 
-    // Extract current letters and shuffle them
-    const letters = existing.map((t) => t.letter);
+    // Shuffle topic order and assign each a slot (position) and matching letter A-F
+    const slots = ["A", "B", "C", "D", "E", "F"];
 
-    // Fisher-Yates shuffle
-    for (let i = letters.length - 1; i > 0; i--) {
+    // Shuffle the topics array using Fisher-Yates
+    for (let i = existing.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      const tmp = letters[i];
-      letters[i] = letters[j];
-      letters[j] = tmp;
+      const tmp = existing[i];
+      existing[i] = existing[j];
+      existing[j] = tmp;
     }
 
-    // Apply shuffled letters to topics while clearing assignment/revealed
+    // Assign new positions and letters based on shuffled order
     for (let idx = 0; idx < existing.length; idx++) {
       const topic = existing[idx];
-      const newLetter = letters[idx];
+      const newLetter = slots[idx] || `S${idx + 1}`;
+      const newPosition = idx + 1;
       await db
         .update(topics)
         .set({
           assignedToUserId: null,
           isRevealed: false,
           letter: newLetter,
+          position: newPosition,
         })
         .where(eq(topics.id, topic.id));
     }
@@ -136,12 +138,12 @@ export class DatabaseStorage implements IStorage {
     if (existing.length > 0) return;
 
     const topicData = [
-      { letter: "A", title: "Le plan de gestion « PRISM »" },
-      { letter: "B", title: "Le plan de gestion « Lean Six Sigma »" },
-      { letter: "C", title: "Le plan de gestion « PMBOK »" },
-      { letter: "D", title: "Le plan de gestion « Waterfall »" },
-      { letter: "E", title: "Le plan de gestion « PRINCE 2 »" },
-      { letter: "F", title: "Le plan de gestion « Agile »" },
+      { letter: "A", title: "Le plan de gestion « PRISM »", position: 1 },
+      { letter: "B", title: "Le plan de gestion « Lean Six Sigma »", position: 2 },
+      { letter: "C", title: "Le plan de gestion « PMBOK »", position: 3 },
+      { letter: "D", title: "Le plan de gestion « Waterfall »", position: 4 },
+      { letter: "E", title: "Le plan de gestion « PRINCE 2 »", position: 5 },
+      { letter: "F", title: "Le plan de gestion « Agile »", position: 6 },
     ];
 
     await db.insert(topics).values(topicData);
