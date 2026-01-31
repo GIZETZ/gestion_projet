@@ -37,7 +37,7 @@ export async function registerRoutes(
   
   // Middleware to check if authenticated
   const isAuthenticated = (req: any, res: any, next: any) => {
-    if (req.session.userId) {
+    if ((req.session as any).userId) {
       next();
     } else {
       res.status(401).json({ message: "Unauthorized" });
@@ -46,8 +46,9 @@ export async function registerRoutes(
 
   // Middleware to check if admin
   const isAdmin = async (req: any, res: any, next: any) => {
-    if (!req.session.userId) return res.status(401).json({ message: "Unauthorized" });
-    const user = await storage.getUser(req.session.userId);
+    const session = req.session as any;
+    if (!session.userId) return res.status(401).json({ message: "Unauthorized" });
+    const user = await storage.getUser(session.userId);
     if (user && user.isAdmin) {
       next();
     } else {
@@ -73,12 +74,8 @@ export async function registerRoutes(
 
       const user = await storage.createUser({
         ...input,
-        // Make first user admin and approved automatically
-        isAdmin: isFirstUser ? true : false,
-        isApproved: isFirstUser ? true : false
-      }); // Note: schema needs to handle this or we update after. 
-      // Actually createUser takes InsertUser which doesn't have isAdmin/isApproved in insertSchema usually.
-      // Let's check schema.
+        groupMembers: input.groupMembers || "",
+      }); 
       
       // If schema doesn't allow passing isAdmin in createUser (it's defaulted in DB), we update it.
       if (isFirstUser) {
@@ -87,7 +84,7 @@ export async function registerRoutes(
         user.isApproved = true;
       }
 
-      req.session.userId = user.id;
+      (req.session as any).userId = user.id;
       res.status(201).json(user);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -107,7 +104,7 @@ export async function registerRoutes(
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      req.session.userId = user.id;
+      (req.session as any).userId = user.id;
       res.json(user);
     } catch (err) {
       res.status(400).json({ message: "Invalid input" });
@@ -121,8 +118,9 @@ export async function registerRoutes(
   });
 
   app.get(api.auth.me.path, async (req, res) => {
-    if (!req.session.userId) return res.status(401).json({ message: "Not logged in" });
-    const user = await storage.getUser(req.session.userId);
+    const session = req.session as any;
+    if (!session.userId) return res.status(401).json({ message: "Not logged in" });
+    const user = await storage.getUser(session.userId);
     if (!user) return res.status(401).json({ message: "User not found" });
     res.json(user);
   });
@@ -134,7 +132,8 @@ export async function registerRoutes(
   });
 
   app.post(api.topics.choose.path, isAuthenticated, async (req, res) => {
-    const user = await storage.getUser(req.session.userId!);
+    const session = req.session as any;
+    const user = await storage.getUser(session.userId!);
     if (!user || !user.isApproved) {
       return res.status(403).json({ message: "You are not approved yet." });
     }

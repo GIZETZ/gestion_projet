@@ -43,3 +43,7 @@ export const loginSchema = z.object({
 export type User = typeof users.$inferSelect;
 export type Topic = typeof topics.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+
+// Types for frontend mapping
+export type UserWithTopic = User & { topicTitle?: string | null };
+

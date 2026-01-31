@@ -1,5 +1,6 @@
 import { Layout } from "@/components/Layout";
 import { useAdminUsers, useApproveUser, useResetGame } from "@/hooks/use-admin";
+import { UserWithTopic } from "@shared/schema";
 import {
   Table,
   TableBody,
@@ -107,7 +108,7 @@ export default function AdminPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users?.filter(u => !u.isAdmin).map((user) => (
+                {(users as UserWithTopic[])?.filter(u => !u.isAdmin).map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">
                       <div className="flex flex-col">

@@ -50,7 +50,7 @@ export default function AuthPage() {
   // Register Form
   const registerForm = useForm({
     resolver: zodResolver(insertUserSchema),
-    defaultValues: { username: "", groupName: "", password: "" },
+    defaultValues: { username: "", groupName: "", groupMembers: "", password: "" },
   });
 
   const onRegister = (data: any) => {
