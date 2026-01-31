@@ -100,12 +100,35 @@ export class DatabaseStorage implements IStorage {
   }
 
   async resetTopics(): Promise<void> {
-    await db
-      .update(topics)
-      .set({
-        assignedToUserId: null,
-        isRevealed: false,
-      });
+    // Clear assignments/revealed and randomize letter positions so cards A-F
+    // are shuffled each reset to make subjects harder to guess.
+    const existing = await db.select().from(topics);
+    if (existing.length === 0) return;
+
+    // Extract current letters and shuffle them
+    const letters = existing.map((t) => t.letter);
+
+    // Fisher-Yates shuffle
+    for (let i = letters.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = letters[i];
+      letters[i] = letters[j];
+      letters[j] = tmp;
+    }
+
+    // Apply shuffled letters to topics while clearing assignment/revealed
+    for (let idx = 0; idx < existing.length; idx++) {
+      const topic = existing[idx];
+      const newLetter = letters[idx];
+      await db
+        .update(topics)
+        .set({
+          assignedToUserId: null,
+          isRevealed: false,
+          letter: newLetter,
+        })
+        .where(eq(topics.id, topic.id));
+    }
   }
 
   async seedTopics(): Promise<void> {
